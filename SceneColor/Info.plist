@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>SceneColor uses your camera to extract colors from the real world</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>SceneColor saves color palettes and frozen moments to your photo library</string>
+</dict>
+</plist>
