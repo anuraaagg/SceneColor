@@ -109,12 +109,17 @@ struct LiveScanView: View {
             resetInactivityTimer()
           }
           .opacity(navOpacity)
-          .scaleEffect(navOpacity > 0.5 ? 1.0 : 0.9)
+          .scaleEffect(cameraVM.mode == .dragging ? 1.05 : (navOpacity > 0.5 ? 1.0 : 0.9))
           .offset(x: dragOffset)
           .gesture(
             DragGesture()
               .onChanged { value in
                 guard cameraVM.mode == .freeze || cameraVM.mode == .dragging else { return }
+
+                if cameraVM.mode == .freeze {
+                  hapticFeedback(style: .light)
+                }
+
                 cameraVM.mode = .dragging
                 dragOffset = max(0, value.translation.width)
                 navOpacity = 1.0
@@ -161,10 +166,13 @@ struct LiveScanView: View {
       navOpacity = 1.0
     }
     inactivityTimer?.invalidate()
-    inactivityTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { _ in
-      withAnimation(.easeInOut(duration: 1.5)) {
-        if cameraVM.mode == .live {
-          navOpacity = 0.0  // Full hide for cleaner look
+    inactivityTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
+      DispatchQueue.main.async {
+        withAnimation(.easeInOut(duration: 1.5)) {
+          // Only hide if we aren't interacting and it's live
+          if cameraVM.mode == .live && self.dragOffset == 0 {
+            self.navOpacity = 0.0
+          }
         }
       }
     }
@@ -194,11 +202,14 @@ struct LiveScanView: View {
 
     hapticFeedback(style: .heavy)
 
-    // Reset state
+    // Reset state with fluid transition
     withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
       dragOffset = 0
       cameraVM.unfreeze()
     }
+
+    // Resume auto-hide
+    resetInactivityTimer()
   }
 
   private func hapticFeedback(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {

@@ -12,6 +12,8 @@ struct BlobOverlay: View {
               x: extracted.location.x * geometry.size.width,
               y: extracted.location.y * geometry.size.height
             )
+            .animation(
+              .interactiveSpring(response: 1.0, dampingFraction: 0.8), value: extracted.location)
         }
       }
     }
