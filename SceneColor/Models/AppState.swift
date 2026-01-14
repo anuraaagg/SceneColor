@@ -7,7 +7,14 @@ class AppState: ObservableObject {
   @Published var scenes: [CaptureScene] = []
   @Published var currentScene: CaptureScene?
   @Published var isFrozen: Bool = false
-  @Published var showTimeline: Bool = false
+  @Published var showTimeline: Bool = false {
+    didSet {
+      if showTimeline {
+        // Spec: scene persists until user enters timeline
+        currentScene = nil
+      }
+    }
+  }
   @Published var selectedMonth: Int?
 
   init() {
@@ -29,6 +36,7 @@ class AppState: ObservableObject {
   func addFreeze(_ freeze: Freeze, to scene: CaptureScene) {
     if let index = scenes.firstIndex(where: { $0.id == scene.id }) {
       scenes[index].freezes.append(freeze)
+      currentScene = scenes[index]  // Keep currentScene in sync
       // TODO: Save to SceneStore
     }
   }

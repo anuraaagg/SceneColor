@@ -4,24 +4,16 @@ import SwiftUI
 struct TimelineView: View {
   @EnvironmentObject var appState: AppState
   @Environment(\.dismiss) var dismiss
-  @State private var selectedMonth: Int? = nil
+
+  @State private var editingSceneID: UUID?
+  @State private var newName: String = ""
+  @State private var selectedFreeze: Freeze?
 
   var body: some View {
     NavigationStack {
-      VStack(spacing: 0) {
-        // Month filter bar
-        ScrollView(.horizontal, showsIndicators: false) {
-          HStack(spacing: 12) {
-            ForEach(1...12, id: \.self) { month in
-              MonthPill(month: month, isSelected: selectedMonth == month) {
-                selectedMonth = selectedMonth == month ? nil : month
-              }
-            }
-          }
-          .padding()
-        }
+      ZStack {
+        Color(.systemGroupedBackground).ignoresSafeArea()
 
-        // Scene list
         if appState.scenes.isEmpty {
           ContentUnavailableView(
             "No Scenes Yet",
@@ -30,62 +22,77 @@ struct TimelineView: View {
           )
         } else {
           List {
-            ForEach(filteredScenes) { scene in
-              FreezeRow(scene: scene)
+            ForEach(appState.scenes) { scene in
+              VStack(alignment: .leading, spacing: 12) {
+                if editingSceneID == scene.id {
+                  TextField(
+                    "Scene Name", text: $newName,
+                    onCommit: {
+                      saveName(for: scene)
+                    }
+                  )
+                  .textFieldStyle(.roundedBorder)
+                  .onSubmit { saveName(for: scene) }
+                } else {
+                  Text(scene.name)
+                    .font(.headline)
+                    .onTapGesture(count: 2) {
+                      editingSceneID = scene.id
+                      newName = scene.name
+                    }
+                }
+
+                HStack(spacing: 8) {
+                  ForEach(scene.freezes) { freeze in
+                    Circle()
+                      .fill(Color.primary.opacity(0.8))
+                      .frame(width: 8, height: 8)
+                      .onTapGesture {
+                        withAnimation {
+                          selectedFreeze = freeze
+                        }
+                      }
+                  }
+                }
+              }
+              .padding(.vertical, 8)
+              .listRowBackground(Color.clear)
+              .listRowSeparator(.hidden)
             }
             .onDelete(perform: deleteScenes)
           }
+          .listStyle(.plain)
+        }
+
+        if let freeze = selectedFreeze {
+          DetailOverlay(freeze: freeze) {
+            withAnimation {
+              selectedFreeze = nil
+            }
+          }
+          .transition(.opacity.combined(with: .scale))
         }
       }
-      .navigationTitle("SceneColor")
-      .navigationBarTitleDisplayMode(.large)
+      .navigationTitle("Timeline")
+      .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Button {
-            dismiss()
-          } label: {
-            Image(systemName: "xmark.circle.fill")
-              .symbolRenderingMode(.hierarchical)
-              .foregroundStyle(.secondary)
-          }
+          Button("Done") { dismiss() }
         }
       }
     }
   }
 
-  private var filteredScenes: [CaptureScene] {
-    guard let month = selectedMonth else { return appState.scenes }
-    return appState.scenes.filter { Calendar.current.component(.month, from: $0.date) == month }
+  private func saveName(for scene: CaptureScene) {
+    if let index = appState.scenes.firstIndex(where: { $0.id == scene.id }) {
+      appState.scenes[index].name = newName
+    }
+    editingSceneID = nil
   }
 
   private func deleteScenes(at offsets: IndexSet) {
     for index in offsets {
-      appState.deleteScene(filteredScenes[index])
-    }
-  }
-}
-
-/// Month filter pill button
-struct MonthPill: View {
-  let month: Int
-  let isSelected: Bool
-  let action: () -> Void
-
-  private let monthNames = [
-    "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-    "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
-  ]
-
-  var body: some View {
-    Button(action: action) {
-      Text(monthNames[month - 1])
-        .font(.caption)
-        .fontWeight(.medium)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.2))
-        .foregroundColor(isSelected ? .white : .primary)
-        .clipShape(Capsule())
+      appState.deleteScene(appState.scenes[index])
     }
   }
 }
